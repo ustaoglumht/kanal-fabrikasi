@@ -100,7 +100,24 @@ def kanal_isle(kanal, sfx):
     else:
         rapor.append(f"⚠️ {kanal}/{ad}: kismi (yt={bool(durum.get('yt'))}, ig={bool(durum.get('ig'))}) - yarin eksik tamamlanir")
 
+def yt_dogrula(sfx):
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+    rt = os.environ.get(f"YT_REFRESH_{sfx}")
+    if not rt:
+        return "anahtar yok"
+    cr = Credentials(None, refresh_token=rt, client_id=os.environ["YT_CLIENT_ID"],
+                     client_secret=os.environ["YT_CLIENT_SECRET"], token_uri="https://oauth2.googleapis.com/token")
+    r = build("youtube", "v3", credentials=cr, cache_discovery=False).channels().list(part="snippet", mine=True).execute()
+    return ", ".join(i["snippet"]["title"] for i in r.get("items", [])) or "kanal yok"
+
 secim = os.environ.get("KANAL", "hepsi")
+if DENEME:
+    for k, s in KANALLAR.items():
+        try:
+            rapor.append(f"DENEME {k}: YouTube -> {yt_dogrula(s)} | Instagram anahtari {'var' if os.environ.get('IG_TOKEN_'+s) else 'yok'}")
+        except Exception as e:
+            rapor.append(f"DENEME {k}: YouTube HATA {e}")
 for k, s in KANALLAR.items():
     if secim in ("hepsi", k):
         try:
