@@ -1,0 +1,46 @@
+name: Gunluk paylasim
+on:
+  schedule:
+    - cron: "23 16 * * *"   # 17:23 Berlin (kis saati)
+  workflow_dispatch:
+    inputs:
+      kanal:
+        description: "kissa / tarih / hepsi"
+        default: "hepsi"
+      deneme:
+        description: "true = paylasmadan sadece kontrol"
+        default: "false"
+permissions:
+  contents: write
+concurrency: paylasim
+jobs:
+  paylas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -q google-api-python-client google-auth requests
+      - name: Paylas
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_KISSA: ${{ secrets.YT_REFRESH_KISSA }}
+          YT_REFRESH_TARIH: ${{ secrets.YT_REFRESH_TARIH }}
+          IG_TOKEN_KISSA: ${{ secrets.IG_TOKEN_KISSA }}
+          IG_USER_KISSA: ${{ secrets.IG_USER_KISSA }}
+          IG_TOKEN_TARIH: ${{ secrets.IG_TOKEN_TARIH }}
+          IG_USER_TARIH: ${{ secrets.IG_USER_TARIH }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          KANAL: ${{ github.event.inputs.kanal || 'hepsi' }}
+          DENEME: ${{ github.event.inputs.deneme || 'false' }}
+          REPO: ${{ github.repository }}
+        run: python scripts/paylas.py
+      - name: Kuyrugu kaydet
+        if: always()
+        run: |
+          git config user.name "kanal-fabrikasi-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A kuyruk yayinlanan
+          git diff --cached --quiet || (git commit -m "paylasim $(date -u +%F)" && git push)
